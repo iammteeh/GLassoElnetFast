@@ -12,6 +12,14 @@ suppressPackageStartupMessages({
   library(dplyr); library(tidyr); library(purrr)
 })
 
+.symm <- function(M) (M + t(M)) / 2
+.pd_nudge <- function(M, tol = 1e-12, add = 1e-8) {
+  ev <- eigen(M, symmetric = TRUE, only.values = TRUE)$values
+  if (min(ev) <= tol) M <- M + (abs(min(ev)) + add) * diag(nrow(M))
+  .symm(M)
+}
+.diag_inv <- function(D) diag(1 / diag(D))
+
 # ---------- Targets (diagonal) ----------
 diag_target <- function(S, type = c("None","Identity","vIdentity","Eigenvalue","MSC","Reg","TrueDiag"),
                         Y = NULL, trueTheta = NULL, use_correlation = TRUE) {
@@ -105,14 +113,16 @@ make_model <- function(model, p) {
     Sigma <- solve(Theta)
     list(Sigma=Sigma, Theta=Theta)
   } else if (model == 5) {
+    stopifnot(p >= 3)
     Theta_tilde <- matrix(0, p, p)
     for (i in 1:p) {
       Theta_tilde[i,i] <- 1
       if (i+1<=p) Theta_tilde[i,i+1] <- Theta_tilde[i+1,i] <- 0.6
       if (i+2<=p) Theta_tilde[i,i+2] <- Theta_tilde[i+2,i] <- 0.3
     }
+    Theta_tilde <- .pd_nudge(Theta_tilde)
     D <- diag(runif(p, 1, 5))
-    Sigma <- solve(Theta_tilde); Sigma <- D^{-1} %*% Sigma %*% D^{-1}
+    Sigma <- solve(Theta_tilde); Sigma <- .diag_inv(D) %*% Sigma %*% .diag_inv(D)
     Theta <- solve(Sigma)
     list(Sigma=Sigma, Theta=Theta)
   } else if (model == 6) {
