@@ -48,20 +48,57 @@ make_model <- function(model, p) {
         hub <- grp[1]
         for (v in grp[-1]) g <- add_edges(g, c(hub, v))
       }
-    } else { # block graph
-      block <- p/10
-      Theta_tilde <- bdiag(replicate(10, {
-        B <- matrix(0.5, block, block); diag(B) <- 1; B
-      }, simplify=FALSE))
-      perm <- sample(1:p); Theta_tilde <- as.matrix(Theta_tilde)[perm, perm]
-      D <- diag(c(rep(1, p/2), rep(1.5, p/2)))
-      Sigma <- solve(Theta_tilde); Sigma <- D^{-1} %*% Sigma %*% D^{-1}
+    } else { # block graph model (model 4)
+      stopifnot(p %% 10 == 0)
+      block <- p %/% 10
+
+      # Build one PD block: diag = 1, off-diag = 0.5
+      B <- matrix(0.5, nrow = block, ncol = block)
+      diag(B) <- 1
+
+      # Assemble a dense block-diagonal Theta_tilde in base R (no Matrix::bdiag)
+      Theta_tilde <- matrix(0, p, p)
+      for (k in 0:9) {
+          idx <- (k*block + 1):((k + 1)*block)
+          Theta_tilde[idx, idx] <- B
+      }
+
+      # Random permutation preserves PD
+      perm <- sample.int(p)
+      Theta_tilde <- Theta_tilde[perm, perm, drop = FALSE]
+
+      # Symmetrize + tiny PD nudge (shouldn't be needed, but safe)
+      Theta_tilde <- (Theta_tilde + t(Theta_tilde)) / 2
+      ev <- eigen(Theta_tilde, symmetric = TRUE, only.values = TRUE)$values
+      if (min(ev) <= 1e-12) {
+          Theta_tilde <- Theta_tilde + (abs(min(ev)) + 1e-8) * diag(p)
+      }
+
+      # Σ = Θ^{-1}
+      Sigma <- solve(Theta_tilde)
+
+      # Heteroscedastic scaling: Σ <- D^{-1} Σ D^{-1}, but do it explicitly
+      D  <- diag(c(rep(1, p/2), rep(1.5, p/2)))
+      Di <- diag(1 / diag(D))
+      Sigma <- Di %*% Sigma %*% Di
+
+      # Clean up numerics
+      Sigma <- (Sigma + t(Sigma)) / 2
+      if (!all(is.finite(Sigma))) {
+          bad <- which(!is.finite(Sigma), arr.ind = TRUE)
+          stop(sprintf("Model 4: non-finite Sigma at [%d,%d]", bad[1,1], bad[1,2]))
+      }
+      evS <- eigen(Sigma, symmetric = TRUE, only.values = TRUE)$values
+      if (min(evS) <= 1e-12) {
+          Sigma <- Sigma + (abs(min(evS)) + 1e-8) * diag(p)
+      }
       Theta <- solve(Sigma)
+
       return(list(Sigma=Sigma, Theta=Theta))
     }
     A <- as_adjacency_matrix(g, type="both", sparse=FALSE)
     A[upper.tri(A)] <- t(A)[upper.tri(A)]
-    A[A!=0] <- 0.3; diag(A) <- 0
+    A[A!=0] <- 0.3; diag(A) <- 0 # threshold and zero diagonal
     lambda_min <- min(eigen(A, symmetric=TRUE, only.values=TRUE)$values)
     D <- diag(c(rep(1, p/2), rep(3, p/2)))
     Theta <- D %*% (A + (abs(lambda_min)+0.2)*diag(p)) %*% D
