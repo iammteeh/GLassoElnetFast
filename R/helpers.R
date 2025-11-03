@@ -133,11 +133,16 @@ make_model <- function(model, p) {
         pmat[i,j] <- pmat[j,i] <- u
       }
     }
+    Theta_tilde <- .symm(pmat)
+    ev <- eigen(Theta_tilde, symmetric=TRUE, only.values=TRUE)$values
+    lambda_min <- min(ev)
+    delta <- if (lambda_min <= 0) abs(lambda_min) + 0.05 else 0.05
+    if (lambda_min <= 0) Theta_tilde <- Theta_tilde + delta * diag(p)
     Theta2 <- pmat
     lambda_min <- min(eigen(Theta2 + t(Theta2), symmetric=TRUE, only.values=TRUE)$values)
     Theta_tilde <- Theta2 + (abs(lambda_min)+0.05)*diag(p)
     D <- diag(runif(p, 1, 5))
-    Sigma <- solve(Theta_tilde); Sigma <- D^{-1} %*% Sigma %*% D^{-1}
+    Sigma <- solve(Theta_tilde); Sigma <- .diag_inv(D) %*% Sigma %*% .diag_inv(D)
     Theta <- solve(Sigma)
     list(Sigma=Sigma, Theta=Theta)
   } else stop("Unknown model")
