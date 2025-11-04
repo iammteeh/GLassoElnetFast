@@ -20,6 +20,21 @@ suppressPackageStartupMessages({
 }
 .diag_inv <- function(D) diag(1 / diag(D))
 
+sanitize_cov <- function(S) {
+  cat("sanitize")
+  if (any(!is.finite(S))) {
+    bad <- which(!is.finite(S), arr.ind = TRUE)
+    stop(sprintf("Sigma has non-finite entries; first at [%d,%d]", bad[1,1], bad[1,2]))
+  }
+  S <- (S + t(S)) / 2
+  ev <- eigen(S, symmetric = TRUE, only.values = TRUE)$values
+  if (min(ev) <= 1e-8) {
+    S <- S + (abs(min(ev)) + 1e-6) * diag(nrow(S))
+  }
+  
+  return(S)
+}
+
 # ---------- Targets (diagonal) ----------
 diag_target <- function(S, type = c("None","Identity","vIdentity","Eigenvalue","MSC","Reg","TrueDiag"),
                         Y = NULL, trueTheta = NULL, use_correlation = TRUE) {

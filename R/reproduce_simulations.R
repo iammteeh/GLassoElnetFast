@@ -11,7 +11,7 @@ set.seed(42)
 # Configuration
 P <- 100
 N <- 200          # sample size per replication (paper uses variety; pick a moderate N)
-N_REPS <- 100     # set smaller for a quick smoke test
+N_REPS <- 10     # set smaller for a quick smoke test
 MODELS <- 1:6
 METHODS <- c("glasso","rope","gelnet")
 ALPHAS <- c(glasso=1, rope=0, gelnet=0.5)
@@ -38,6 +38,11 @@ for (model_id in MODELS) {
   Sigma <- mm$Sigma; Theta_true <- mm$Theta
 
   for (rep_idx in 1:N_REPS) {
+    # wherever Sigma is created/loaded:
+    Sigma <- sanitize_cov(Sigma)
+    if (any(!is.finite(Sigma))) print(head(which(!is.finite(Sigma), arr.ind=TRUE), 10))
+    ev <- eigen(Sigma, symmetric = TRUE, only.values = TRUE)$values
+    cat(sprintf("min eig = %.3e\n", min(ev)))
     Y <- mvtnorm::rmvnorm(N, sigma = Sigma)
 
     for (method in METHODS) {
@@ -50,7 +55,8 @@ for (model_id in MODELS) {
           } else {
             T_ok <- TRUE
           }
-
+          cat(sprintf("Model %d, Rep %d, Method %s, Alpha %.2f, PenDiag %s, Target %s\n",
+                      model_id, rep_idx, method, alpha, pen_diag, target))
           # If diagonal not penalized and target != None, it's effectively no target (paper note)
           target_eff <- if (!pen_diag) "None" else target
 
@@ -79,6 +85,9 @@ for (model_id in MODELS) {
             TP=gs["TP"], TN=gs["TN"], FP=gs["FP"], FN=gs["FN"],
             stringsAsFactors = FALSE
           )
+          cat("  Done.\n")
+          # show result row
+          print(results[[length(results)]])
         }
       }
     }
