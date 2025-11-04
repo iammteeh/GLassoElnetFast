@@ -4,6 +4,7 @@
 suppressPackageStartupMessages({
   library(dplyr); library(tidyr); library(purrr)
   source("helpers.R")
+  source("gen_models.R")
 })
 
 set.seed(42)
@@ -34,8 +35,14 @@ results <- list()
 
 for (model_id in MODELS) {
   cat("== Model", model_id, "==\n")
-  mm <- make_model(model_id, P)
-  Sigma <- mm$Sigma; Theta_true <- mm$Theta
+  if (model_id == 7) {
+    B_list <- make_ba_conditional_hamiltonian(P, m_attach = 2, add_budget = 0.02)
+    sim <- sample_gsm(B_list, n = N, beta = 0.1, lambda0 = 0.5, a = 3, b = 3)
+    Y <- sim$Y; Sigma <- sim$Sigma; Theta_true <- sim$Theta
+  } else {
+    mm <- make_model(model_id, P)
+    Sigma <- mm$Sigma; Theta_true <- mm$Theta
+  }
 
   for (rep_idx in 1:N_REPS) {
     # wherever Sigma is created/loaded:
@@ -43,7 +50,15 @@ for (model_id in MODELS) {
     if (any(!is.finite(Sigma))) print(head(which(!is.finite(Sigma), arr.ind=TRUE), 10))
     ev <- eigen(Sigma, symmetric = TRUE, only.values = TRUE)$values
     cat(sprintf("min eig = %.3e\n", min(ev)))
-    Y <- mvtnorm::rmvnorm(N, sigma = Sigma)
+    if (min(ev) <= 1e-8) {
+      Sigma <- Sigma + (abs(min(ev)) + 1e-6) * diag(nrow(Sigma))
+    }
+    if (model_id != 7) {
+      Y <- mvtnorm::rmvnorm(N, sigma = Sigma)
+    } else {
+      Y <- sim$Y
+    }
+    #S <- cor(Y) # recommended scaling
 
     for (method in METHODS) {
       alpha <- ALPHAS[[method]]
