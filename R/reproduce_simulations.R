@@ -20,9 +20,10 @@ ALPHAS <- c(glasso=1, rope=0, gelnet=0.5)
 TARGETS <- c("None","Identity","vIdentity","Eigenvalue","MSC")
 PENALIZE_DIAG <- c(TRUE, FALSE)   # "F" in paper == FALSE
 lambda_grid <- 0.9^(0:40)
-
-dir.create("results", showWarnings = FALSE)
-dir.create("plots", showWarnings = FALSE)
+lambda_grid_dense <- 10^seq(-3, 0, length.out=121)
+alpha_grid <- c(0.2, 0.35, 0.5, 0.65, 0.8)
+dir.create("results")
+dir.create("plots")
 
 run_one <- function(model_id, rep_idx) {
   mm <- make_model(model_id, P)
@@ -65,48 +66,44 @@ for (model_id in MODELS) {
       alpha <- ALPHAS[[method]]
       for (pen_diag in PENALIZE_DIAG) {
         for (target in TARGETS) {
-          # TrueDiag target only valid in simulations
-          if (target == "TrueDiag") {
-            T_ok <- TRUE
-          } else {
-            T_ok <- TRUE
-          }
-          cat(sprintf("Model %d, Rep %d, Method %s, Alpha %.2f, PenDiag %s, Target %s\n",
-                      model_id, rep_idx, method, alpha, pen_diag, target))
-          # If diagonal not penalized and target != None, it's effectively no target (paper note)
-          target_eff <- if (!pen_diag) "None" else target
+            for (alpha in alpha_grid) {
+              cat(sprintf("Model %d, Rep %d, Method %s, Alpha %.2f, PenDiag %s, Target %s\n",
+                          model_id, rep_idx, method, alpha, pen_diag, target))
+              # If diagonal not penalized and target != None, it's effectively no target (paper note)
+              target_eff <- if (!pen_diag) "None" else target
 
-          # Select lambda by 5-fold CV
-          lam <- cv_select_lambda(Y=Y, method=method, alpha=alpha,
-                                  target_type=target_eff, penalize_diag=pen_diag,
-                                  lambda_grid=lambda_grid)
+              # Select lambda by 5-fold CV
+              lam <- cv_select_lambda(Y=Y, method=method, alpha=alpha,
+                                      target_type=target_eff, penalize_diag=pen_diag,
+                                      lambda_grid=lambda_grid_dense)
 
-          # Fit on full data
-          fit <- fit_method(S=cor(Y), method=method, alpha=alpha,
-                            target_type=target_eff, penalize_diag=pen_diag, lambda=lam)
-          Theta_hat <- fit$Theta
+              # Fit on full data
+              fit <- fit_method(S=cor(Y), method=method, alpha=alpha,
+                                  target_type=target_eff, penalize_diag=pen_diag, lambda=lam)
+              Theta_hat <- fit$Theta
 
-          # Metrics
-          KL  <- kl_loss_safe(Sigma, Theta_hat)
-          L2  <- l2_loss(Theta_true, Theta_hat)
-          SP  <- sp_loss(Theta_true, Theta_hat)
-          gs  <- graph_scores(Theta_true, Theta_hat, eps=1e-5)
-          cur <- curve_points(Theta_true, Theta_hat)
-          PRAUC <- pr_auc(cur); ROCAUC <- roc_auc(cur)
-          results[[length(results)+1]] <- data.frame(
-            model=model_id, rep=rep_idx,
-            method=method, alpha=alpha,
-            penalize_diag=pen_diag, target=target_eff, lambda=lam,
-            KL=KL, L2=L2, SP=SP,
-            edges=count_edges(Theta_hat),
-            F1=gs["F1"], MCC=gs["MCC"],
-            TP=gs["TP"], TN=gs["TN"], FP=gs["FP"], FN=gs["FN"],
-            PRAUC=PRAUC, ROCAUC=ROCAUC,
-            stringsAsFactors = FALSE
-          )
-          cat("  Done.\n")
-          # show result row
-          print(results[[length(results)]])
+              # Metrics
+              KL  <- kl_loss_safe(Sigma, Theta_hat)
+              L2  <- l2_loss(Theta_true, Theta_hat)
+              SP  <- sp_loss(Theta_true, Theta_hat)
+              gs  <- graph_scores(Theta_true, Theta_hat, eps=1e-5)
+              cur <- curve_points(Theta_true, Theta_hat)
+              PRAUC <- pr_auc(cur); ROCAUC <- roc_auc(cur)
+              results[[length(results)+1]] <- data.frame(
+                  model=model_id, rep=rep_idx,
+                  method=method, alpha=alpha,
+                  penalize_diag=pen_diag, target=target_eff, lambda=lam,
+                  KL=KL, L2=L2, SP=SP,
+                  edges=count_edges(Theta_hat),
+                  F1=gs["F1"], MCC=gs["MCC"],
+                  TP=gs["TP"], TN=gs["TN"], FP=gs["FP"], FN=gs["FN"],
+                  PRAUC=PRAUC, ROCAUC=ROCAUC,
+                  stringsAsFactors = FALSE
+              )
+              cat("  Done.\n")
+              # show result row
+              print(results[[length(results)]])
+            }
         }
       }
     }

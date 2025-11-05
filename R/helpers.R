@@ -221,5 +221,3 @@ lambda_for_edges <- function(fit_fn, target_edges, grid) {
   }
   last
 }
-lambda_grid_dense <- 10^seq(-3, 0, length.out=121)
-alpha_grid <- c(0.2, 0.35, 0.5, 0.65, 0.8)
