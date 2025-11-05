@@ -162,55 +162,6 @@ make_model <- function(model, p) {
     list(Sigma=Sigma, Theta=Theta)
   } else stop("Unknown model")
 }
-
-# ---------- Metrics ----------
-eps_adj <- function(M, eps=1e-8) {
-  # Avoid numerical indefiniteness
-  M <- (M + t(M))/2
-  ev <- eigen(M, symmetric=TRUE)$values
-  if (min(ev) <= eps) {
-    M <- M + (abs(min(ev)) + eps) * diag(nrow(M))
-  }
-  M
-}
-
-kl_loss <- function(Sigma, Theta_hat) {
-  p <- nrow(Sigma)
-  val <- sum(Sigma * Theta_hat) - determinant(Sigma %*% solve(Sigma))$modulus # trick not needed; use ΣΘ̂
-  val <- sum(Sigma * Theta_hat) - log(det(Sigma %*% solve(solve(Theta_hat)))) - p # but simpler:
-  # safer:
-  A <- Sigma %*% Theta_hat
-  as.numeric(sum(diag(A)) - log(det(A)) - p)
-}
-
-kl_loss_safe <- function(Sigma, Theta_hat) {
-  p <- nrow(Sigma)
-  A <- Sigma %*% Theta_hat
-  A <- eps_adj(A)
-  as.numeric(sum(diag(A)) - log(det(A)) - p)
-}
-
-l2_loss <- function(Theta, Theta_hat) sqrt(sum((Theta - Theta_hat)^2))
-
-sp_loss <- function(Theta, Theta_hat) {
-  E <- Theta - Theta_hat
-  sqrt(max(eigen(t(E)%*%E, symmetric=TRUE, only.values=TRUE)$values))
-}
-
-graph_scores <- function(Theta, Theta_hat, eps=1e-5) {
-  A_true <- (abs(Theta) >= eps) * 1; diag(A_true) <- 0
-  A_hat  <- (abs(Theta_hat) >= eps) * 1; diag(A_hat) <- 0
-  upper <- upper.tri(A_true)
-  TP <- sum((A_true==1 & A_hat==1)[upper])
-  TN <- sum((A_true==0 & A_hat==0)[upper])
-  FP <- sum((A_true==0 & A_hat==1)[upper])
-  FN <- sum((A_true==1 & A_hat==0)[upper])
-  F1 <- ifelse((2*TP+FN+FP)==0, 0, 2*TP/(2*TP+FN+FP))
-  denom <- sqrt((TP+FP)*(TP+FN)*(TN+FP)*(TN+FN))
-  MCC <- ifelse(denom==0, 0, (TP*TN - FP*FN)/denom)
-  c(F1=F1, MCC=MCC, TP=TP, TN=TN, FP=FP, FN=FN)
-}
-
 # ---------- Fitting wrappers ----------
 fit_method <- function(S, Y=NULL, method=c("glasso","rope","gelnet"),
                        alpha=0.5, target_type="None", penalize_diag=TRUE, lambda) {
@@ -259,3 +210,16 @@ cv_select_lambda <- function(Y, method, alpha, target_type, penalize_diag,
   }
   lambda_grid[ which.min(scores) ]
 }
+
+lambda_for_edges <- function(fit_fn, target_edges, grid) {
+  last <- NULL
+  for (lam in grid) {
+    Th <- fit_fn(lam)
+    e <- count_edges(Th)
+    last <- list(lambda=lam, Theta=Th, edges=e)
+    if (e <= target_edges) break
+  }
+  last
+}
+lambda_grid_dense <- 10^seq(-3, 0, length.out=121)
+alpha_grid <- c(0.2, 0.35, 0.5, 0.65, 0.8)

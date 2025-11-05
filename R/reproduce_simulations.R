@@ -5,6 +5,7 @@ suppressPackageStartupMessages({
   library(dplyr); library(tidyr); library(purrr)
   source("helpers.R")
   source("gen_models.R")
+  source("metrics.R")
 })
 
 set.seed(42)
@@ -90,14 +91,17 @@ for (model_id in MODELS) {
           L2  <- l2_loss(Theta_true, Theta_hat)
           SP  <- sp_loss(Theta_true, Theta_hat)
           gs  <- graph_scores(Theta_true, Theta_hat, eps=1e-5)
-
+          cur <- curve_points(Theta_true, Theta_hat)
+          PRAUC <- pr_auc(cur); ROCAUC <- roc_auc(cur)
           results[[length(results)+1]] <- data.frame(
             model=model_id, rep=rep_idx,
             method=method, alpha=alpha,
             penalize_diag=pen_diag, target=target_eff, lambda=lam,
             KL=KL, L2=L2, SP=SP,
+            edges=count_edges(Theta_hat),
             F1=gs["F1"], MCC=gs["MCC"],
             TP=gs["TP"], TN=gs["TN"], FP=gs["FP"], FN=gs["FN"],
+            PRAUC=PRAUC, ROCAUC=ROCAUC,
             stringsAsFactors = FALSE
           )
           cat("  Done.\n")
