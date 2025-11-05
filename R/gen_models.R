@@ -35,14 +35,14 @@ g2 <- igraph::add_edges(g1, unlist(add_intra))
   if (B > 0) {
     for (b in 1:B) {
       uv <- sample(1:p, 2, replace = FALSE)
-      if (!igraph::are.connected(g2, uv[1], uv[2])) {
+      if (!igraph::are_adjacent(g2, uv[1], uv[2])) {
         g2 <- igraph::add_edges(g2, uv)
       }
     }
   }
 
   # Build precision templates (normalized Laplacians)
-  A <- as.matrix(igraph::as_adj(g2, sparse = FALSE))
+  A <- as.matrix(igraph::as_adjacency_matrix(g2, sparse = FALSE))
   L0 <- diag(rowSums(A)) - A
 
   # Community path Laplacians
@@ -60,7 +60,6 @@ g2 <- igraph::add_edges(g1, unlist(add_intra))
     Bi <- matrix(0, p, p); Bi[idx, idx] <- P
     B_list[[paste0("B", gidx)]] <- Bi
   }
-
   B_list
 }
 
