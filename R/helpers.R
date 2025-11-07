@@ -48,6 +48,8 @@ diag_target <- function(S, type = c("None","Identity","vIdentity","Eigenvalue","
          "vIdentity"   = if (pass_Y) target(Y = Y,        type = "vI",         cor = cor_flag) else target(S = S, type = "vI",         cor = cor_flag),
          "Eigenvalue"  = if (pass_Y) target(Y = Y,        type = "Eigenvalue", cor = cor_flag) else target(S = S, type = "Eigenvalue", cor = cor_flag),
          "MSC"         = if (pass_Y) target(Y = Y,        type = "MSC",        cor = cor_flag) else target(S = S, type = "MSC",        cor = cor_flag),
+         "Regression"  = if (pass_Y) target(Y = Y,        type = "Regression", cor = cor_flag) else stop("Y must be provided for Regression target"),
+         "TrueDiag"    = if (!is.null(trueTheta)) diag(diag(trueTheta)) else stop("TrueDiag target requires trueTheta"),
          stop("Unknown target")
   )
 }

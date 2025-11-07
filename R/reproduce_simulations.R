@@ -17,7 +17,7 @@ N_REPS <- 10     # set smaller for a quick smoke test
 MODELS <- 1:6
 METHODS <- c("glasso","rope","gelnet")
 ALPHAS <- c(glasso=1, rope=0, gelnet=0.5)
-TARGETS <- c("None","Identity","vIdentity","Eigenvalue","MSC")
+TARGETS <- c("None","Identity","vIdentity","Eigenvalue","MSC", "Regression", "TrueDiag")
 PENALIZE_DIAG <- c(TRUE, FALSE)   # "F" in paper == FALSE
 lambda_grid <- 0.9^(0:40)
 lambda_grid_dense <- 10^seq(-3, 0, length.out=121)
