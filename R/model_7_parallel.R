@@ -153,7 +153,7 @@ eval_one <- function(row, Y_local, Theta_true_local) {
 if (opt$grid_par) {
   # Parallel across grid; set BLAS threads=1 in sbatch
   rows <- parallel::mclapply(split(param_grid, seq_len(nrow(param_grid))),
-                             function(row) eval_one(row, Y_local, Theta_true_local), mc.cores = max(1L, opt$workers), mc.preschedule = TRUE)
+                             function(row) eval_one(row, Y_local = Y, Theta_true_local = Theta_true), mc.cores = max(1L, opt$workers), mc.preschedule = TRUE)
   err <- vapply(rows, inherits, logical(1), "data.frame")  # check no errors
   if (any(!err)) stop("Error in eval_one:", paste(which(!err), collapse = ", "))
   df <- dplyr::bind_rows(rows)
