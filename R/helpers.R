@@ -38,6 +38,9 @@ sanitize_cov <- function(S) {
 # ---------- Targets (diagonal) ----------
 diag_target <- function(S, type = c("None","Identity","vIdentity","Eigenvalue","MSC","Regression","TrueDiag"),
                         Y = NULL, trueTheta = NULL, use_correlation = TRUE) {
+  # we could also allow S input, but Y is more general (for Regression target)
+  # In practice, we always use Y when available (because we want correlation)
+  # so the Sigma is computed internally here.
   type <- match.arg(type)
   if (type == "None") return(NULL)
   cor_flag <- isTRUE(use_correlation)
@@ -190,7 +193,7 @@ fit_method <- function(S, Y=NULL, trueTheta=NULL, method=c("glasso","rope","geln
 # ---------- Cross-validation over lambda ----------
 cv_select_lambda <- function(Y, trueTheta, method, alpha, target_type, penalize_diag,
                              lambda_grid) {
-  # 5-fold CV like the examples; use negative log-likelihood as score.
+  # 5-fold CV like the examples; use negative log-likelihood as score and pick lambda minimizing it. 
   n <- nrow(Y)
   folds <- sample(rep(1:5, length.out=n))
   scores <- numeric(length(lambda_grid))
@@ -201,7 +204,7 @@ cv_select_lambda <- function(Y, trueTheta, method, alpha, target_type, penalize_
       Ytr <- Y[folds!=f,,drop=FALSE]
       Yte <- Y[folds==f,,drop=FALSE]
       S_tr <- cor(Ytr)
-      fit <- fit_method(S=S_tr, Y=NULL, trueTheta=Theta_true, method=method, alpha=alpha,
+      fit <- fit_method(S=S_tr, Y=Ytr, trueTheta=trueTheta, method=method, alpha=alpha,
                         target_type=target_type, penalize_diag=penalize_diag, lambda=lam)
       Theta_hat <- fit$Theta
       # Evaluate test (Gaussian log-likelihood up to constant): tr(S_te Θ̂) - log det Θ̂
