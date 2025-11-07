@@ -78,7 +78,7 @@ for (model_id in MODELS) {
                                       lambda_grid=lambda_grid_dense)
 
               # Fit on full data
-              fit <- fit_method(S=cor(Y), method=method, alpha=alpha,
+              fit <- fit_method(S=cor(Y), trueTheta=Theta_true, method=method, alpha=alpha,
                                   target_type=target_eff, penalize_diag=pen_diag, lambda=lam)
               Theta_hat <- fit$Theta
 

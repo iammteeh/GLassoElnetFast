@@ -20,7 +20,7 @@ stability_one <- function(Y, fit_args, edges_target){
   # λ that matches edge budget on full S
   fm <- lambda_for_edges(function(lam){
     fit_method(S=Sfull, lambda=lam, method=fit_args$method, alpha=fit_args$alpha,
-               target_type=fit_args$target_type, penalize_diag=fit_args$penalize_diag)$Theta
+               target_type=fit_args$target_type, penalize_diag=fit_args$penalize_diag, trueTheta=fit_args$trueTheta)$Theta
   }, target_edges=edges_target, grid=lambda_grid_dense)
   lam <- fm$lambda
 
@@ -29,7 +29,7 @@ stability_one <- function(Y, fit_args, edges_target){
     idx <- sample(1:nrow(Y), replace=TRUE)
     Sb  <- cor(Y[idx, , drop=FALSE])
     Th  <- fit_method(S=Sb, lambda=lam, method=fit_args$method, alpha=fit_args$alpha,
-                      target_type=fit_args$target_type, penalize_diag=fit_args$penalize_diag)$Theta
+                      target_type=fit_args$target_type, penalize_diag=fit_args$penalize_diag, trueTheta=fit_args$trueTheta)$Theta
     A   <- (abs(Th) > 1e-12)*1; diag(A) <- 0
     votes <- votes + A
   }
@@ -71,7 +71,7 @@ for (rep_idx in 1:opt$nreps) {
         #fm <- lambda_for_edges(fit_fn, target_edges = opt$edges, grid = lambda_grid_dense)
         fm <- stability_one(Y,
                               fit_args = list(method=method, alpha=alpha,
-                                              target_type=target_eff, penalize_diag=pen_diag),
+                                              target_type=target_eff, penalize_diag=pen_diag, trueTheta=Theta_true),
                               edges_target = opt$edges)
         Theta_hat <- fm$Theta; lam <- fm$lambda; ecount <- fm$edges
         KL  <- kl_loss_safe(Sigma, Theta_hat)

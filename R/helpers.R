@@ -36,7 +36,7 @@ sanitize_cov <- function(S) {
 }
 
 # ---------- Targets (diagonal) ----------
-diag_target <- function(S, type = c("None","Identity","vIdentity","Eigenvalue","MSC","Reg","TrueDiag"),
+diag_target <- function(S, type = c("None","Identity","vIdentity","Eigenvalue","MSC","Regression","TrueDiag"),
                         Y = NULL, trueTheta = NULL, use_correlation = TRUE) {
   type <- match.arg(type)
   if (type == "None") return(NULL)
@@ -165,13 +165,13 @@ make_model <- function(model, p) {
   } else stop("Unknown model")
 }
 # ---------- Fitting wrappers ----------
-fit_method <- function(S, Y=NULL, method=c("glasso","rope","gelnet"),
+fit_method <- function(S, Y=NULL, trueTheta=NULL, method=c("glasso","rope","gelnet"),
                        alpha=0.5, target_type="None", penalize_diag=TRUE, lambda) {
   method <- match.arg(method)
   # Use correlation input, as recommended
   if (!is.null(Y)) S <- cor(Y)
   Tmat <- NULL
-  if (target_type!="None") Tmat <- diag_target(S, type=target_type, Y=Y, use_correlation=TRUE)
+  if (target_type!="None") Tmat <- diag_target(S, type=target_type, Y=Y, trueTheta=trueTheta, use_correlation=TRUE)
   if (method=="rope") alpha <- 0
   if (method=="glasso") alpha <- 1
 
