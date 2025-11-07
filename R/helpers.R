@@ -188,7 +188,7 @@ fit_method <- function(S, Y=NULL, trueTheta=NULL, method=c("glasso","rope","geln
 }
 
 # ---------- Cross-validation over lambda ----------
-cv_select_lambda <- function(Y, method, alpha, target_type, penalize_diag,
+cv_select_lambda <- function(Y, trueTheta, method, alpha, target_type, penalize_diag,
                              lambda_grid) {
   # 5-fold CV like the examples; use negative log-likelihood as score.
   n <- nrow(Y)
@@ -201,7 +201,7 @@ cv_select_lambda <- function(Y, method, alpha, target_type, penalize_diag,
       Ytr <- Y[folds!=f,,drop=FALSE]
       Yte <- Y[folds==f,,drop=FALSE]
       S_tr <- cor(Ytr)
-      fit <- fit_method(S=S_tr, Y=NULL, method=method, alpha=alpha,
+      fit <- fit_method(S=S_tr, Y=NULL, trueTheta=Theta_true, method=method, alpha=alpha,
                         target_type=target_type, penalize_diag=penalize_diag, lambda=lam)
       Theta_hat <- fit$Theta
       # Evaluate test (Gaussian log-likelihood up to constant): tr(S_te Θ̂) - log det Θ̂
